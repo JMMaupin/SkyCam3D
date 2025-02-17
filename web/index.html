@@ -17,16 +17,22 @@
 
 <script>
 let scene, camera, renderer, controls;
-let posts = [], ropes = [], centralPoint, postLabels = [], ground, axesHelper;
+let posts = [], ropes = [], spar, postLabels = [], ground, axesHelper;
 const ropeLengths = [7, 7, 7, 7];
 
 const params = {
-    width: 10,
-    depth: 6,
     post1Height: 5,
     post2Height: 5,
     post3Height: 5,
     post4Height: 5,
+    post1X: -5,  // Add parameter for post 1 X coordinate
+    post1Z: -3,  // Add parameter for post 1 Z coordinate
+    post2X: 5,   // Add parameter for post 2 X coordinate
+    post2Z: -3,  // Add parameter for post 2 Z coordinate
+    post3X: 5,   // Add parameter for post 3 X coordinate
+    post3Z: 3,   // Add parameter for post 3 Z coordinate
+    post4X: -5,  // Add parameter for post 4 X coordinate
+    post4Z: 3,   // Add parameter for post 4 Z coordinate
     rope1: 6,
     rope2: 6,
     rope3: 6,
@@ -50,6 +56,7 @@ function init() {
 
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     camera.position.set(3, 3, 8);  // Adjust the camera position to be closer
+    camera.lookAt(new THREE.Vector3(0, 1, 0));  // Make the camera look at (0, 1, 0)
     controls.update();
 
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
@@ -136,7 +143,7 @@ function initScene() {
     posts.forEach(post => scene.remove(post));
     ropes.forEach(rope => scene.remove(rope));
     removeTextLabels();
-    if (centralPoint) scene.remove(centralPoint);
+    if (spar) scene.remove(spar);
     if (ground) scene.remove(ground);
 
     const postGeometry = new THREE.CylinderGeometry(0.1, 0.1, 1, 8);
@@ -162,10 +169,10 @@ function initScene() {
 
     const rectangleGeometry = new THREE.PlaneGeometry(params.rectangleWidth, params.rectangleHeight);
     const rectangleMaterial = new THREE.MeshPhongMaterial({ color: 0x00ff00, side: THREE.DoubleSide });
-    centralPoint = new THREE.Mesh(rectangleGeometry, rectangleMaterial);
-    centralPoint.rotation.x = Math.PI / 2;  // Rotate to make it horizontal
-    centralPoint.castShadow = true;  // Enable shadows for the rectangle
-    scene.add(centralPoint);
+    spar = new THREE.Mesh(rectangleGeometry, rectangleMaterial);
+    spar.rotation.x = Math.PI / 2;  // Rotate to make it horizontal
+    spar.castShadow = true;  // Enable shadows for the rectangle
+    scene.add(spar);
 
     updateGeometry();
 }
@@ -213,30 +220,39 @@ function calculateCentralPosition() {
 function updateGround() {
     if (ground) scene.remove(ground);
 
-    const groundWidth = params.width * 1.2;
-    const groundDepth = params.depth * 1.2;
+    // Calculate the bounding box of the posts
+    const minX = Math.min(params.post1X, params.post2X, params.post3X, params.post4X);
+    const maxX = Math.max(params.post1X, params.post2X, params.post3X, params.post4X);
+    const minZ = Math.min(params.post1Z, params.post2Z, params.post3Z, params.post4Z);
+    const maxZ = Math.max(params.post1Z, params.post2Z, params.post3Z, params.post4Z);
+
+    // Calculate the width and depth of the ground with a 20% margin
+    const groundWidth = (maxX - minX) * 1.2;
+    const groundDepth = (maxZ - minZ) * 1.2;
+
+    // Calculate the center position of the ground
+    const centerX = (minX + maxX) / 2;
+    const centerZ = (minZ + maxZ) / 2;
+
     const groundGeometry = new THREE.PlaneGeometry(groundWidth, groundDepth);
     const groundMaterial = new THREE.MeshPhongMaterial({ color: 0x707070, side: THREE.DoubleSide });
     ground = new THREE.Mesh(groundGeometry, groundMaterial);
     ground.rotation.x = -Math.PI / 2;
-    ground.position.y = 0;
+    ground.position.set(centerX, 0, centerZ);  // Center the ground
     ground.receiveShadow = true;  // Enable receiving shadows for the ground
     scene.add(ground);
 }
 
 function updateGeometry() {
-    const halfWidth = params.width / 2;
-    const halfDepth = params.depth / 2;
-
     const positions = [
-        [-halfWidth, 0, -halfDepth],
-        [halfWidth, 0, -halfDepth],
-        [halfWidth, 0, halfDepth],
-        [-halfWidth, 0, halfDepth]
+        [params.post1X, params.post1Height / 2, params.post1Z],
+        [params.post2X, params.post2Height / 2, params.post2Z],
+        [params.post3X, params.post3Height / 2, params.post3Z],
+        [params.post4X, params.post4Height / 2, params.post4Z]
     ];
 
     posts.forEach((post, i) => {
-        post.position.set(positions[i][0], params[`post${i + 1}Height`] / 2, positions[i][2]);
+        post.position.set(positions[i][0], positions[i][1], positions[i][2]);
         post.scale.y = params[`post${i + 1}Height`];
     });
 
@@ -246,7 +262,7 @@ function updateGeometry() {
     });
 
     const newPosition = calculateCentralPosition();
-    centralPoint.position.copy(newPosition);
+    spar.position.copy(newPosition);
 
     const rectangleHalfWidth = params.rectangleWidth / 2;  // Use parameter for size
     const rectangleHalfDepth = params.rectangleHeight / 2;  // Use parameter for size
@@ -280,14 +296,21 @@ function updateAxesHelper() {
 function setupGUI() {
     const gui = new dat.GUI();
 
-    gui.add(params, 'width', 1, 20).name('Largeur').onChange(updateGeometry);
-    gui.add(params, 'depth', 1, 20).name('Profondeur').onChange(updateGeometry);
-
     const postFolder = gui.addFolder('Hauteurs des poteaux');
     postFolder.add(params, 'post1Height', 1, 10).name('Poteau 1').onChange(updateGeometry);
     postFolder.add(params, 'post2Height', 1, 10).name('Poteau 2').onChange(updateGeometry);
     postFolder.add(params, 'post3Height', 1, 10).name('Poteau 3').onChange(updateGeometry);
     postFolder.add(params, 'post4Height', 1, 10).name('Poteau 4').onChange(updateGeometry);
+
+    const positionFolder = gui.addFolder('Positions des poteaux');
+    positionFolder.add(params, 'post1X', -10, 10).name('Poteau 1 X').onChange(updateGeometry);
+    positionFolder.add(params, 'post1Z', -10, 10).name('Poteau 1 Z').onChange(updateGeometry);
+    positionFolder.add(params, 'post2X', -10, 10).name('Poteau 2 X').onChange(updateGeometry);
+    positionFolder.add(params, 'post2Z', -10, 10).name('Poteau 2 Z').onChange(updateGeometry);
+    positionFolder.add(params, 'post3X', -10, 10).name('Poteau 3 X').onChange(updateGeometry);
+    positionFolder.add(params, 'post3Z', -10, 10).name('Poteau 3 Z').onChange(updateGeometry);
+    positionFolder.add(params, 'post4X', -10, 10).name('Poteau 4 X').onChange(updateGeometry);
+    positionFolder.add(params, 'post4Z', -10, 10).name('Poteau 4 Z').onChange(updateGeometry);
 
     const ropeFolder = gui.addFolder('Longueurs des cordes');
     ropeFolder.add(params, 'rope1', 1, 10).name('Corde 1').onChange(v => { ropeLengths[0] = v; updateGeometry(); });
@@ -296,13 +319,13 @@ function setupGUI() {
     ropeFolder.add(params, 'rope4', 1, 10).name('Corde 4').onChange(v => { ropeLengths[3] = v; updateGeometry(); });
 
     gui.add(params, 'rectangleWidth', 0.1, 5).name('Largeur du rectangle').onChange(() => {
-        centralPoint.geometry.dispose();
-        centralPoint.geometry = new THREE.PlaneGeometry(params.rectangleWidth, params.rectangleHeight);
+        spar.geometry.dispose();
+        spar.geometry = new THREE.PlaneGeometry(params.rectangleWidth, params.rectangleHeight);
         updateGeometry();
     });
     gui.add(params, 'rectangleHeight', 0.1, 5).name('Hauteur du rectangle').onChange(() => {
-        centralPoint.geometry.dispose();
-        centralPoint.geometry = new THREE.PlaneGeometry(params.rectangleWidth, params.rectangleHeight);
+        spar.geometry.dispose();
+        spar.geometry = new THREE.PlaneGeometry(params.rectangleWidth, params.rectangleHeight);
         updateGeometry();
     });
 
