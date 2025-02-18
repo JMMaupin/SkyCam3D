@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Simulation de tension de cordes 3D</title>
+    <title>SkyCam simulator by diJMedia</title>
     <style>
         body { margin: 0; overflow: hidden; }
         canvas { display: block; }
@@ -18,29 +18,25 @@
 <script>
 let scene, camera, renderer, controls;
 let masts = [], ropes = [], spar, mastLabels = [], ground, axesHelper;
-const ropeLengths = [7, 7, 7, 7];
 
 const params = {
-    mast1Height: 5,
-    mast2Height: 5,
-    mast3Height: 5,
-    mast4Height: 5,
-    mast1X: -5,  // Add parameter for mast 1 X coordinate
-    mast1Z: -3,  // Add parameter for mast 1 Z coordinate
-    mast2X: 5,   // Add parameter for mast 2 X coordinate
-    mast2Z: -3,  // Add parameter for mast 2 Z coordinate
-    mast3X: 5,   // Add parameter for mast 3 X coordinate
-    mast3Z: 3,   // Add parameter for mast 3 Z coordinate
-    mast4X: -5,  // Add parameter for mast 4 X coordinate
-    mast4Z: 3,   // Add parameter for mast 4 Z coordinate
-    rope1: 6,
-    rope2: 6,
-    rope3: 6,
-    rope4: 6,
-    sparWidth: 0.5,  // Add parameter for rectangle width
-    sparLength: 0.3, // Add parameter for rectangle height
+    masts: [
+        { height: 5, x: -5, z: -3 },
+        { height: 5, x: 5, z: -3 },
+        { height: 5, x: 5, z: 3 },
+        { height: 5, x: -5, z: 3 }
+    ],
+    ropes: [
+        { length: 7 },
+        { length: 7 },
+        { length: 7 },
+        { length: 7 }
+    ],
+    spar: {
+        width: 0.5,
+        length: 0.3
+    },
     showAxes: false,
-    reset: () => initScene()
 };
 
 function init() {
@@ -167,7 +163,7 @@ function initScene() {
         scene.add(ropes[i]);
     }
 
-    const rectangleGeometry = new THREE.PlaneGeometry(params.sparWidth, params.sparLength);
+    const rectangleGeometry = new THREE.PlaneGeometry(params.spar.width, params.spar.length);
     const rectangleMaterial = new THREE.MeshPhongMaterial({ color: 0x00ff00, side: THREE.DoubleSide });
     spar = new THREE.Mesh(rectangleGeometry, rectangleMaterial);
     spar.rotation.x = Math.PI / 2;  // Rotate to make it horizontal
@@ -198,7 +194,7 @@ function calculateCentralPosition() {
         mastTops.forEach((mastTop, i) => {
             const vecToPoint = bestPosition.clone().sub(mastTop);
             const currentDistance = vecToPoint.length();
-            const targetDistance = ropeLengths[i];
+            const targetDistance = params.ropes[i].length;
 
             const error = currentDistance - targetDistance;
             totalError += Math.abs(error);
@@ -221,10 +217,10 @@ function updateGround() {
     if (ground) scene.remove(ground);
 
     // Calculate the bounding box of the masts
-    const minX = Math.min(params.mast1X, params.mast2X, params.mast3X, params.mast4X);
-    const maxX = Math.max(params.mast1X, params.mast2X, params.mast3X, params.mast4X);
-    const minZ = Math.min(params.mast1Z, params.mast2Z, params.mast3Z, params.mast4Z);
-    const maxZ = Math.max(params.mast1Z, params.mast2Z, params.mast3Z, params.mast4Z);
+    const minX = Math.min(...params.masts.map(mast => mast.x));
+    const maxX = Math.max(...params.masts.map(mast => mast.x));
+    const minZ = Math.min(...params.masts.map(mast => mast.z));
+    const maxZ = Math.max(...params.masts.map(mast => mast.z));
 
     // Calculate the width and depth of the ground with a 20% margin
     const groundWidth = (maxX - minX) * 1.2;
@@ -244,16 +240,11 @@ function updateGround() {
 }
 
 function updateGeometry() {
-    const positions = [
-        [params.mast1X, params.mast1Height / 2, params.mast1Z],
-        [params.mast2X, params.mast2Height / 2, params.mast2Z],
-        [params.mast3X, params.mast3Height / 2, params.mast3Z],
-        [params.mast4X, params.mast4Height / 2, params.mast4Z]
-    ];
+    const positions = params.masts.map(mast => [mast.x, mast.height / 2, mast.z]);
 
     masts.forEach((mast, i) => {
         mast.position.set(positions[i][0], positions[i][1], positions[i][2]);
-        mast.scale.y = params[`mast${i + 1}Height`];
+        mast.scale.y = params.masts[i].height;
     });
 
     removeTextLabels();
@@ -264,8 +255,8 @@ function updateGeometry() {
     const newPosition = calculateCentralPosition();
     spar.position.copy(newPosition);
 
-    const rectangleHalfWidth = params.sparWidth / 2;  // Use parameter for size
-    const rectangleHalfDepth = params.sparLength / 2;  // Use parameter for size
+    const rectangleHalfWidth = params.spar.width / 2;  // Use parameter for size
+    const rectangleHalfDepth = params.spar.length / 2;  // Use parameter for size
 
     const rectangleCorners = [
         new THREE.Vector3(newPosition.x - rectangleHalfWidth, newPosition.y, newPosition.z - rectangleHalfDepth),
@@ -297,40 +288,35 @@ function setupGUI() {
     const gui = new dat.GUI();
 
     const mastFolder = gui.addFolder('Mast Height');
-    mastFolder.add(params, 'mast1Height', 1, 10).name('Mast 1').onChange(updateGeometry);
-    mastFolder.add(params, 'mast2Height', 1, 10).name('Mast 2').onChange(updateGeometry);
-    mastFolder.add(params, 'mast3Height', 1, 10).name('Mast 3').onChange(updateGeometry);
-    mastFolder.add(params, 'mast4Height', 1, 10).name('Mast 4').onChange(updateGeometry);
+    params.masts.forEach((mast, i) => {
+        mastFolder.add(mast, 'height', 1, 10).name(`Mast ${i + 1}`).onChange(updateGeometry);
+    });
 
     const positionFolder = gui.addFolder('Mast positions');
-    positionFolder.add(params, 'mast1X', -10, 10).name('Mast 1 X').onChange(updateGeometry);
-    positionFolder.add(params, 'mast1Z', -10, 10).name('Mast 1 Z').onChange(updateGeometry);
-    positionFolder.add(params, 'mast2X', -10, 10).name('Mast 2 X').onChange(updateGeometry);
-    positionFolder.add(params, 'mast2Z', -10, 10).name('Mast 2 Z').onChange(updateGeometry);
-    positionFolder.add(params, 'mast3X', -10, 10).name('Mast 3 X').onChange(updateGeometry);
-    positionFolder.add(params, 'mast3Z', -10, 10).name('Mast 3 Z').onChange(updateGeometry);
-    positionFolder.add(params, 'mast4X', -10, 10).name('Mast 4 X').onChange(updateGeometry);
-    positionFolder.add(params, 'mast4Z', -10, 10).name('Mast 4 Z').onChange(updateGeometry);
+    params.masts.forEach((mast, i) => {
+        positionFolder.add(mast, 'x', -10, 10).name(`Mast ${i + 1} X`).onChange(updateGeometry);
+        positionFolder.add(mast, 'z', -10, 10).name(`Mast ${i + 1} Z`).onChange(updateGeometry);
+    });
 
     const ropeFolder = gui.addFolder('Ropes Length');
-    ropeFolder.add(params, 'rope1', 1, 10).name('Rope 1').onChange(v => { ropeLengths[0] = v; updateGeometry(); });
-    ropeFolder.add(params, 'rope2', 1, 10).name('Rope 2').onChange(v => { ropeLengths[1] = v; updateGeometry(); });
-    ropeFolder.add(params, 'rope3', 1, 10).name('Rope 3').onChange(v => { ropeLengths[2] = v; updateGeometry(); });
-    ropeFolder.add(params, 'rope4', 1, 10).name('Rope 4').onChange(v => { ropeLengths[3] = v; updateGeometry(); });
+    params.ropes.forEach((rope, i) => {
+        ropeFolder.add(rope, 'length', 1, 10).name(`Rope ${i + 1}`).onChange(() => {
+            updateGeometry();
+        });
+    });
 
-    gui.add(params, 'sparWidth', 0.1, 5).name('spar Width').onChange(() => {
+    gui.add(params.spar, 'width', 0.1, 5).name('spar Width').onChange(() => {
         spar.geometry.dispose();
-        spar.geometry = new THREE.PlaneGeometry(params.sparWidth, params.sparLength);
+        spar.geometry = new THREE.PlaneGeometry(params.spar.width, params.spar.length);
         updateGeometry();
     });
-    gui.add(params, 'sparLength', 0.1, 5).name('spar Lengtht').onChange(() => {
+    gui.add(params.spar, 'length', 0.1, 5).name('spar Length').onChange(() => {
         spar.geometry.dispose();
-        spar.geometry = new THREE.PlaneGeometry(params.sparWidth, params.sparLength);
+        spar.geometry = new THREE.PlaneGeometry(params.spar.width, params.spar.length);
         updateGeometry();
     });
 
     gui.add(params, 'showAxes').name('show Axes').onChange(updateAxesHelper);
-    gui.add(params, 'reset').name('reset');
 }
 
 function animate() {
