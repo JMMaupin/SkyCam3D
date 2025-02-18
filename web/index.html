@@ -119,8 +119,8 @@ function createTextLabel(text, position) {
     loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function (font) {
         const textGeometry = new THREE.TextGeometry(text, {
             font: font,
-            size: 0.5,
-            height: 0.1,
+            size: 0.2,
+            height: 0.05,
         });
         const textMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
         const textMesh = new THREE.Mesh(textGeometry, textMaterial);
@@ -249,7 +249,7 @@ function updateGeometry() {
 
     removeTextLabels();
     masts.forEach((mast, i) => {
-        createTextLabel(`${i + 1}`, new THREE.Vector3(mast.position.x, mast.position.y + mast.scale.y / 2 + 0.5, mast.position.z));
+        createTextLabel(`${i + 1}`, new THREE.Vector3(mast.position.x-0.05, mast.position.y-0.05 + mast.scale.y / 2 + 0.1, mast.position.z-0.05));
     });
 
     const newPosition = calculateCentralPosition();
