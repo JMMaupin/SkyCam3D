@@ -59,7 +59,7 @@ function init() {
     scene.add(ambientLight);
 
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(1, 2, 1);
+    directionalLight.position.set(3, 20, 10);
     directionalLight.castShadow = true;  // Enable shadows for the light
 
     // Adjust shadow camera parameters
@@ -304,7 +304,7 @@ function setupGUI() {
             updateGeometry();
         });
     });
-
+    ropeFolder.open();
     const sparFolder = gui.addFolder('Spar');
         sparFolder.add(params.spar, 'width', 0.1, 1).name('Width').onChange(() => {
             spar.geometry.dispose();
