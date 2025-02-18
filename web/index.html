@@ -108,7 +108,7 @@ function init() {
     const gradientGeometry = new THREE.SphereGeometry(500, 32, 32);
     const gradientMesh = new THREE.Mesh(gradientGeometry, gradientMaterial);
     scene.add(gradientMesh);
-
+    updateAxesHelper()
     initScene();
     setupGUI();
     animate();
@@ -305,16 +305,17 @@ function setupGUI() {
         });
     });
 
-    gui.add(params.spar, 'width', 0.1, 5).name('spar Width').onChange(() => {
-        spar.geometry.dispose();
-        spar.geometry = new THREE.PlaneGeometry(params.spar.width, params.spar.length);
-        updateGeometry();
-    });
-    gui.add(params.spar, 'length', 0.1, 5).name('spar Length').onChange(() => {
-        spar.geometry.dispose();
-        spar.geometry = new THREE.PlaneGeometry(params.spar.width, params.spar.length);
-        updateGeometry();
-    });
+    const sparFolder = gui.addFolder('Spar');
+        sparFolder.add(params.spar, 'width', 0.1, 1).name('Width').onChange(() => {
+            spar.geometry.dispose();
+            spar.geometry = new THREE.PlaneGeometry(params.spar.width, params.spar.length);
+            updateGeometry();
+        });
+        sparFolder.add(params.spar, 'length', 0.1, 1).name('Length').onChange(() => {
+            spar.geometry.dispose();
+            spar.geometry = new THREE.PlaneGeometry(params.spar.width, params.spar.length);
+            updateGeometry();
+        });
 
     gui.add(params, 'showAxes').name('show Axes').onChange(updateAxesHelper);
 }
