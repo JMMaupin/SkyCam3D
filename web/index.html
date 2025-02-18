@@ -26,17 +26,20 @@ const params = {
         { height: 5, x: 5, z: 3 },
         { height: 5, x: -5, z: 3 }
     ],
-    ropes: [
-        { length: 7 },
-        { length: 7 },
-        { length: 7 },
-        { length: 7 }
-    ],
     spar: {
         width: 0.5,
         length: 0.3
     },
     showAxes: false,
+};
+
+let dynParams = {
+    ropes: [
+        { length: 7 },
+        { length: 7 },
+        { length: 7 },
+        { length: 7 }
+    ]
 };
 
 function init() {
@@ -194,7 +197,7 @@ function calculateCentralPosition() {
         mastTops.forEach((mastTop, i) => {
             const vecToPoint = bestPosition.clone().sub(mastTop);
             const currentDistance = vecToPoint.length();
-            const targetDistance = params.ropes[i].length;
+            const targetDistance = dynParams.ropes[i].length;
 
             const error = currentDistance - targetDistance;
             totalError += Math.abs(error);
@@ -299,7 +302,7 @@ function setupGUI() {
     });
 
     const ropeFolder = gui.addFolder('Ropes Length');
-    params.ropes.forEach((rope, i) => {
+    dynParams.ropes.forEach((rope, i) => {
         ropeFolder.add(rope, 'length', 1, 10).name(`Rope ${i + 1}`).onChange(() => {
             updateGeometry();
         });
